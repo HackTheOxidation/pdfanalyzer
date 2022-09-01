@@ -1,92 +1,90 @@
 # os2ds-pdf-PoC
 
+## What is this?
+
+This repository contain a Proof of Concept regarding the decision to
+rewrite parts of os2datascanner's engine in a new language with the goal
+of gaining a considerable speed-up in performance.
+
+One of the slowest engine components is the pdf-scanner.
+So, in this PoC, we will benchmark `python` (with `PyPDF2`) against
+alternatives.
+
+## Languages included in the PoC
+
+Choosing a language for a project is not at all trivial.
+The main goal is a gain in performance, but there are other factors to
+consider such as ease-of-use, developer experience and workforce availability.
+Speed isn't the only valid concern.
+
+To narrow the field, we consider the fastest languages according to 
+"The Computer Language Benchmarks Game":
+
+![How many times more CPU seconds](https://benchmarksgame-team.pages.debian.net/benchmarksgame/download/fastest.svg)
 
 
-## Getting started
+At the time of writting some of the fastest languages are:
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- C++ (g++)
+- Rust
+- C# .NET
+- Julia
+- Haskell (ghc)
+- OCaml
+- Go
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Since the main goal of the PoC is reading and analyzing pdf-files, which in general involves
+string and text manipulation, the language has to be well-suited for such tasks.
 
-## Add your files
+That is, languages that have poor support for string and text manipulation have already been eliminated from the list
+(C, Fortran, etc.).
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+We prefer languages, whose reference implementation can produce an executable binary for native targets, since this eliminates
+overhead (i.e. there is no need to ship the runtime alongside the code).
 
-```
-cd existing_repo
-git remote add origin https://git.magenta.dk/os2datascanner/os2ds-pdf-poc.git
-git branch -M master
-git push -uf origin master
-```
+Therefore, C# .NET is eliminated. This is also due to the fact that C# .NET is a Microsoft controlled platform.
 
-## Integrate with your tools
+C++ may be one of the fastest languages, however it is also the most complicated and difficult language to learn and use.
+A famous quote from the inventor of C++, Bjarne Stroustrup: "C makes it easy to shoot yourself in the foot; C++ makes it harder, 
+but when you do it blows your whole leg off".
 
-- [ ] [Set up project integrations](https://git.magenta.dk/os2datascanner/os2ds-pdf-poc/-/settings/integrations)
+For this reason and the fact that finding (good) C++ developers is extremely difficult.
 
-## Collaborate with your team
+As for the remaining languages: Rust, Julia, Haskell, OCaml and Go, developers are equally difficult to find
+since the majority of these languages are fairly new (or have only gained popularity in the last couple of years).
+This means that the ease of learning a language becomes a factor.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+Regarding this difficulty, we have ranked the contenders from easiest (1) to most difficult (5) to learn
+from the perspective of a python developer.
 
-## Test and Deploy
+- 1: Julia
+- 2: Go
+- 3: Haskell
+- 4: OCaml
+- 5: Rust
 
-Use the built-in continuous integration in GitLab.
+The syntax of Julia is quite similar to that of python, which makes it a great candidate.
+Julia is garbage-collected and is JIT-compiled to LLVM IR, which makes it both fast and
+easy to use.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+Go is intended to be a successor to C, and aims to be a very minimalistic language.
+It only has 26 reserved keywords, so the barrier to entry is fairly low, aside from the
+fact that it has pointers. Go is compiled to native machine code though LLVM, is garbage-collected
+and libraries are statically linked.
 
-***
+The thing about Haskell is that the language itself is not that difficult to learn.
+But, the functional paradigm that haskell is built on may be a big stone that many stumble
+over. However, for programmers that are used to the functional style, haskell code
+can be very compact and elegant. The reference implementation of Haskell, 
+the Glorious Glasgow Haskell Compiler (ghc), compiles code to native machine code 
+though LLVM and is garbage-collected.
 
-# Editing this README
+OCaml belongs to the ML-family of languages (ML stands for Meta Language) and
+supports both imperative and declarative programming styles.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Rust may be the fastest out of the contenders, but is it also the most difficult to learn.
+Why is that? Borrowing and Ownership (+ Lifetimes) is an alternative way of managing memory
+compared to garbage-collection, and it requires almost as much knowledge about memory management
+as C++. There are two modes: safe and unsafe. In safe-mode, the rust-compiler will check the code
+for memory-allocation issues at compile-time and throw an error, i.e. it is impossible to compile
+a memory-unsafe program in this mode.
