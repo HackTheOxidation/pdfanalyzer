@@ -101,7 +101,7 @@ func dispatch(line []byte, reader *bufio.Reader, pobj *PdfObject) {
 }
 
 func main() {
-	fp, err := os.Open("gcc.pdf")
+	fp, err := os.Open("../../assets/gcc.pdf")
 	check(err)
 
 	name := fp.Name()
