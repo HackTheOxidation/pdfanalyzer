@@ -14,10 +14,20 @@ import (
 const EOF string = "%%EOF"
 const EOFL int = len(EOF)
 
+type PdfAST struct {
+	objects []PdfObject
+	metadata PdfMetadata
+}
+
+type PdfMetadata struct {
+	version string
+}
+
 type PdfObjectField struct {
 	field string
 	value string 
 }
+
 
 type PdfObjectPosition struct {
 	x int
