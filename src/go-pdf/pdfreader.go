@@ -14,6 +14,21 @@ import (
 const EOF string = "%%EOF"
 const EOFL int = len(EOF)
 
+type RefreshingReader struct {
+	fp *os.File
+	reader *bufio.Reader
+}
+
+func NewRefreshingReader(filename string) *RefreshingReader {
+	fp, err := os.Open(filename)
+	check(err)
+	reader := bufio.NewReader(fp)
+	return &RefreshingReader{
+		fp,
+		reader,
+	}
+}
+
 type PdfAST struct {
 	objects []PdfObject
 	metadata PdfMetadata
@@ -28,7 +43,6 @@ type PdfObjectField struct {
 	value string 
 }
 
-
 type PdfObjectPosition struct {
 	x int
 	y int
@@ -40,9 +54,9 @@ type PdfStream struct {
 }
 
 type PdfObject struct {
-	PdfObjectPosition
+	pos PdfObjectPosition
 	fields []PdfObjectField
-	PdfStream
+	stream PdfStream
 }
 
 func NewPdfObject() *PdfObject {
@@ -53,13 +67,22 @@ func NewPdfObject() *PdfObject {
 	}
 }
 
+func (r *RefreshingReader) Name() string {
+	return r.fp.Name()
+}
+
+func (r *RefreshingReader) ReadByte() (byte, error) {
+	peek, err := 	
+}
+
 func check(err error) {
 	if err != nil {
+		fmt.Println(err)
 		panic(err)
 	}
 }
 
-func ReadObject(reader *bufio.Reader) {
+func ReadObject(reader *bufio.Reader) *PdfObject {
 	var err error = nil;
 	var line []byte;
 	pobj := NewPdfObject()
@@ -71,6 +94,8 @@ func ReadObject(reader *bufio.Reader) {
 
 		dispatch(line, reader, pobj)
 	}
+
+	return pobj
 }
 
 func splitKeyValue(words []string) (string, string, error) {
@@ -83,12 +108,16 @@ func splitKeyValue(words []string) (string, string, error) {
 
 func readStream(reader *bufio.Reader, pobj *PdfObject) {
 	var buffer []byte;
-	peek, err := reader.Peek(len("endstream"))
+	peek, err := reader.Peek(EOFL)
 	check(err)
 	for string(peek) != "endstream" {
 		b, err := reader.ReadByte()
+		if err != io.EOF {
+			
+		}
 		check(err)
 		buffer = append(buffer, b)
+		peek, err = reader.Peek(EOFL)
 	}
 
 	b := bytes.NewReader(buffer)
@@ -97,11 +126,11 @@ func readStream(reader *bufio.Reader, pobj *PdfObject) {
 
 	stream, err := io.ReadAll(rc) 
 	check(err)
+	pobj.stream = PdfStream{ "Stream", stream }
 	fmt.Printf("stream: %s\n", stream)
 }
 
 func readDict(reader *bufio.Reader, pobj *PdfObject) {
-
 }
 
 func dispatch(line []byte, reader *bufio.Reader, pobj *PdfObject) {
@@ -121,13 +150,13 @@ func main() {
 	fmt.Printf("File name: %s\n", name)
 
 	reader := bufio.NewReader(fp)
-	peek, err := reader.Peek(EOFL)
-	check(err)
-	for string(peek) != EOF {
-		ReadObject(reader)
 
-		peek, err = reader.Peek(EOFL)
-		check(err)
+	peek, err := reader.Peek(1)
+	r := reader.Buffered()
+	check(err)
+	fmt.Printf("Buffered: %d, Peak: %x\n", r, peek)
+	for r := reader.Buffered(); r > 0; r = reader.Buffered() {
+		ReadObject(reader)
 	}
 	
 	fp.Close()
