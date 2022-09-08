@@ -14,19 +14,62 @@ import (
 const EOF string = "%%EOF"
 const EOFL int = len(EOF)
 
+const ENDSTREAM string = "endstream"
+const ENDSTREAML int = len(ENDSTREAM)
+
 type RefreshingReader struct {
 	fp *os.File
 	reader *bufio.Reader
 }
 
-func NewRefreshingReader(filename string) *RefreshingReader {
+func NewRefreshingReader(filename string) (*RefreshingReader, error) {
 	fp, err := os.Open(filename)
-	check(err)
 	reader := bufio.NewReader(fp)
 	return &RefreshingReader{
 		fp,
 		reader,
+	}, err
+}
+
+func (r *RefreshingReader) reloadBuffer() {
+	r.reader = bufio.NewReader(r.fp)
+}
+
+func (r *RefreshingReader) Close() {
+	r.fp.Close()
+}
+
+func (r *RefreshingReader) Name() string {
+	return r.fp.Name()
+}
+
+func (r *RefreshingReader) ReadByte() (byte, error) {
+	b, err := r.reader.ReadByte()
+	if err == io.EOF {
+		r.reloadBuffer()
+		return r.ReadByte()
 	}
+	return b, err
+}
+
+func (r *RefreshingReader) Peek(n int) ([]byte, error) {
+	return r.reader.Peek(n)
+}
+
+func (r *RefreshingReader) ReadLine() ([]byte, bool, error) {
+	return r.reader.ReadLine()
+}
+
+func (r *RefreshingReader) IsEOF() bool {
+	peek, err := r.reader.Peek(EOFL)
+	check(err)
+	return string(peek) == EOF
+}
+
+func (r *RefreshingReader) IsEndstream() bool {
+	peek, err := r.Peek(ENDSTREAML)
+	check(err)
+	return string(peek) == ENDSTREAM
 }
 
 type PdfAST struct {
@@ -67,13 +110,6 @@ func NewPdfObject() *PdfObject {
 	}
 }
 
-func (r *RefreshingReader) Name() string {
-	return r.fp.Name()
-}
-
-func (r *RefreshingReader) ReadByte() (byte, error) {
-	peek, err := 	
-}
 
 func check(err error) {
 	if err != nil {
@@ -82,7 +118,7 @@ func check(err error) {
 	}
 }
 
-func ReadObject(reader *bufio.Reader) *PdfObject {
+func ReadObject(reader *RefreshingReader) *PdfObject {
 	var err error = nil;
 	var line []byte;
 	pobj := NewPdfObject()
@@ -90,7 +126,7 @@ func ReadObject(reader *bufio.Reader) *PdfObject {
 	for !strings.Contains(string(line), "endobj") {
 		line, _, err = reader.ReadLine(); 
 		check(err)
-		fmt.Printf("%s\n", line)
+		//fmt.Printf("%s\n", line)
 
 		dispatch(line, reader, pobj)
 	}
@@ -106,18 +142,13 @@ func splitKeyValue(words []string) (string, string, error) {
 	}
 }
 
-func readStream(reader *bufio.Reader, pobj *PdfObject) {
+func readStream(reader *RefreshingReader, pobj *PdfObject) {
 	var buffer []byte;
-	peek, err := reader.Peek(EOFL)
-	check(err)
-	for string(peek) != "endstream" {
+	
+	for !reader.IsEndstream() {
 		b, err := reader.ReadByte()
-		if err != io.EOF {
-			
-		}
 		check(err)
 		buffer = append(buffer, b)
-		peek, err = reader.Peek(EOFL)
 	}
 
 	b := bytes.NewReader(buffer)
@@ -127,13 +158,14 @@ func readStream(reader *bufio.Reader, pobj *PdfObject) {
 	stream, err := io.ReadAll(rc) 
 	check(err)
 	pobj.stream = PdfStream{ "Stream", stream }
-	fmt.Printf("stream: %s\n", stream)
+	//fmt.Printf("stream: %s\n", stream)
 }
 
-func readDict(reader *bufio.Reader, pobj *PdfObject) {
+func readDict(reader *RefreshingReader, pobj *PdfObject) {
+	
 }
 
-func dispatch(line []byte, reader *bufio.Reader, pobj *PdfObject) {
+func dispatch(line []byte, reader *RefreshingReader, pobj *PdfObject) {
 	line_str := string(line)
 	if strings.HasPrefix(line_str, "stream") {
 		readStream(reader, pobj)
@@ -143,21 +175,32 @@ func dispatch(line []byte, reader *bufio.Reader, pobj *PdfObject) {
 }
 
 func main() {
-	fp, err := os.Open("../../assets/gcc.pdf")
+	file_name := "../../assets/gcc.pdf"
+	reader, err := NewRefreshingReader(file_name)
 	check(err)
+	count := 0
 
-	name := fp.Name()
-	fmt.Printf("File name: %s\n", name)
-
-	reader := bufio.NewReader(fp)
-
-	peek, err := reader.Peek(1)
-	r := reader.Buffered()
-	check(err)
-	fmt.Printf("Buffered: %d, Peak: %x\n", r, peek)
-	for r := reader.Buffered(); r > 0; r = reader.Buffered() {
+	for !reader.IsEOF() {
 		ReadObject(reader)
+		count++
+		fmt.Printf("Read Object #%d.\n", count)
 	}
 	
-	fp.Close()
+	// fp, err := os.Open("../../assets/gcc.pdf")
+	// check(err)
+
+	// name := fp.Name()
+	// fmt.Printf("File name: %s\n", name)
+
+	// reader := bufio.NewReader(fp)
+
+	// peek, err := reader.Peek(1)
+	// r := reader.Buffered()
+	// check(err)
+	// fmt.Printf("Buffered: %d, Peak: %x\n", r, peek)
+	// for r := reader.Buffered(); r > 0; r = reader.Buffered() {
+	// 	ReadObject(reader)
+	// }
+	
+	// fp.Close()
 }

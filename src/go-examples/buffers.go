@@ -14,7 +14,7 @@ func check(err error) {
 }
 
 func main() {
-	fp, err := os.Open("../../assets/gcc.pdf")
+	fp, err := os.Open("file.txt")
 	check(err)
 
 	reader := bufio.NewReader(fp)
