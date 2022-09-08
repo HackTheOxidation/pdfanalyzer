@@ -11,6 +11,9 @@ import (
 	"strings"
 )
 
+const EOF string = "%%EOF"
+const EOFL int = len(EOF)
+
 type PdfObjectField struct {
 	field string
 	value string 
@@ -108,6 +111,14 @@ func main() {
 	fmt.Printf("File name: %s\n", name)
 
 	reader := bufio.NewReader(fp)
-	ReadObject(reader)
+	peek, err := reader.Peek(EOFL)
+	check(err)
+	for string(peek) != EOF {
+		ReadObject(reader)
+
+		peek, err = reader.Peek(EOFL)
+		check(err)
+	}
+	
 	fp.Close()
 }
