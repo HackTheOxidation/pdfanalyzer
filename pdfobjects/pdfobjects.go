@@ -1,10 +1,7 @@
 package pdfobjects
 
 import (
-	"bytes"
-	"compress/zlib"
 	"errors"
-	"io"
 
 	"git.magenta.dk/os2datascanner/pdfanalyzer/pdftypes"
 )
@@ -62,35 +59,6 @@ func (pdf Pdf) GetObject(i int) (*PdfObject, error) {
 	}
 }
 
-// Wrapper for pdf stream.
-type PdfStream struct {
-	streamtype string
-	content []byte
-}
-
-// Create a new `PdfStream` from byte array and streamtype.
-func NewPdfStream(streamtype string, content []byte) PdfStream {
-	return PdfStream{
-		streamtype,
-		content,
-	}
-}
-
-// Extract the contents of a stream.
-func (s PdfStream) Extract(pobj *PdfObject) ([]byte, error) {
-	if len(s.content) == 0 {
-		return nil, errors.New("This stream is empty.")
-	}
-	
-	b := bytes.NewReader(s.content)
-	rc, err := zlib.NewReader(b)
-	if err != nil {
-		return nil, err
-	}
-	
-	return io.ReadAll(rc)
-}
-
 // Wrapper for pdf object.
 type PdfObject struct {
 	pos pdftypes.PdfReference
@@ -113,6 +81,51 @@ func (pobj *PdfObject) SetDict(dict pdftypes.PdfDict) {
 }
 
 // Helper function for extracting the stream of the PdfObject.
-func (pobj *PdfObject) ExtractStream() ([]byte, error) {
-	return pobj.Stream.Extract(pobj)
+func (pobj *PdfObject) ExtractStream(cmap *CMap) (string, bool, error) {
+	stream, process, err := pobj.Stream.Extract(pobj, cmap)
+	
+	if stream == nil {
+		return "", process, err
+	}
+	
+	return string(stream), process, err
+}
+
+// Returns the type of the object.
+func (pobj PdfObject) GetType() pdftypes.PdfName {
+	t, ok := pobj.dict[pdftypes.OBJ_TYPE].(pdftypes.PdfName)
+
+	if ok {
+		return t
+	} else {
+		return pdftypes.PdfName("")
+	}
+}
+
+// Checks if the object is an image
+func (pobj PdfObject) IsImage() bool {
+	if pobj.dict[pdftypes.OBJ_TYPE] == pdftypes.XOBJECT {
+		return true
+	}
+
+	return false
+}
+
+// Checks if the object is just text.
+func (pobj PdfObject) IsText() bool {
+	return pobj.dict[pdftypes.OBJ_TYPE] == nil
+}
+
+// Check whether the stream of the object is encoded.
+func (pobj PdfObject) IsEncoded() bool {
+	return pobj.dict[pdftypes.FILTER] != nil
+}
+
+// Get the encoding type of the associated stream.
+func (pobj PdfObject) GetEncoding() pdftypes.PdfName {
+	if !pobj.IsEncoded() {
+		return ""
+	}
+
+	return pobj.dict[pdftypes.FILTER].(pdftypes.PdfName) 
 }

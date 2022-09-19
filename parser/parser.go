@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"errors"
@@ -60,7 +60,6 @@ func (r *PdfReader) dispatch(line []byte, pobj *pdfobjects.PdfObject, line_numbe
 	line_str := string(line)
 	if pdftypes.StreamBegins(line_str) {
 		r.readStream(pobj, line_number)
-		fmt.Println("Read one stream")
 	} else if pdftypes.DictBegins(line_str) {
 		tokens := r.tokenizeDict(line_str, line_number)
 		result, _ := r.parseValue(&tokens, line_number)
@@ -68,7 +67,6 @@ func (r *PdfReader) dispatch(line []byte, pobj *pdfobjects.PdfObject, line_numbe
 		dict := result.(pdftypes.PdfDict)
 		
 		pobj.SetDict(dict)
-		fmt.Println("Read one dictionary")
 	} 
 }
 
