@@ -43,7 +43,7 @@ func WritingReducer(out []chan ProcessorResult, original *pdfobjects.Pdf) {
 		for obj := range out[i] {
 			text := obj.stream
 			if text != "" && obj.err == nil {
-				fp.WriteString(text)
+				fp.WriteString(text + "\n")
 			}
 		}
 	}
